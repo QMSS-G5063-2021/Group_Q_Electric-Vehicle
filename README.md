@@ -1,1 +1,1 @@
-# Group_Electric-Vehicle
+# This is the group's topic on EVs
