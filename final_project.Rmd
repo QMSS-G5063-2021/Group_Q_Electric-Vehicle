@@ -1,0 +1,797 @@
+---
+title: "What Makes an Electric Vehicle Win?"
+authors: "Wanying Li, Yunxuan Chen, Taotao Jiang, Jia Ying Lv"
+output:
+  html_document:
+    toc: true
+    code_folding: hide
+    df_print: paged
+    code_download: true
+  html_notebook:
+    toc: yes
+    theme: journal
+  ioslides_presentation:
+    smaller: yes
+    keep_md: true
+  pdf_document:
+    toc: true
+    df_print: kable
+urlcolor: red
+font-family: Helvetica
+autosize: yes
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE, cache = T, message = F, warning = F, cache.lazy = F)
+library(dplyr)
+library(ggthemes)
+library(ggplot2)
+library(readxl)
+library(plotly)
+library(stringi)
+library(highcharter)
+library(ggmap)
+library(leaflet)
+library(rgdal)
+library(tmap)
+library(rgdal)
+library(broom)
+library(rvest)     
+library(stringr) 
+library(NLP)
+library(tm)
+library(colorRamps)
+library(patchwork)
+library(RColorBrewer)
+library(ggplot2)    
+library(magrittr)
+library(dplyr)
+library(ggpubr)
+library(tidyverse)
+library(DT)
+library(colorspace)
+```
+
+
+
+
+
+### **Introduction**
+Transportation is currently the United States’ largest source of greenhouse gas emissions, and transportation-sector electrification is widely recognized as one of the best strategies for significantly reducing these emissions. Invented as early as mid-19th century, electric vehicles (EVs) have become the modern society's choice to reduce carbon emissions and promote sustainable growth. Recent years have witnessed a rapid rising trend of global EV growth. 
+
+In the US, EV registrations reached record market share of 1.8% in 2020. Regionally, the New York City's share of 2% is driving the Northeast. According to their 2020 Renewables on the Rise report, New York State ranks #2 in the United States for EV sold and available EV charging infrastructure, having more than 53,000 registered EVs on the road and an estimated 1,750 public EV charging stations.
+
+Using New York State as an example, our project aims to analyze the historical trend and current status of the EV market, and predict the future image of EV industry. Specifically, our project consists of 3 parts: first, we analyze the historical trend of the EV industry in New York State, together with the contributing factors. Second, we map the current distribution of EV registration and charging stations in New York State at county level. Finally, we employ sentiment analysis and LDA model analysis to explore customer's needs and expectation about EV.
+
+
+
+
+
+### **Part 1: Exploring the development of EV market and major factors**
+
+In this part, we'll visualize the historical development of EVs in New York State and analyze the major drivers for the rapid growth. First, We'll start by providing a historical overview of the EV registration.
+
+
+
+#### The rapid growth of EV registration in New York State
+
+
+```{r, message=FALSE, warning=FALSE}
+
+xl_data <- "C:/Users/wanyi/Desktop/Data_Visualization/project/EV-Registration-Tables.xlsx"
+
+EV_time <- read_excel(path=xl_data, sheet=5)
+
+EV_time <- head(EV_time, -1)
+
+EV_time <- mutate(EV_time, Time=paste(`Month Name`, stri_sub(EV_time$Year, 3,4), sep=" '"))
+
+
+p1 <- EV_time %>%
+  group_by("Year") %>%
+  hchart(., "area", hcaes(x = `Time`, y=cumsum(`Total EVs`)))%>%  
+  hc_title(text = "Original EV Registration in New York State (2011-2019)") %>%
+  hc_subtitle(text = "Source: New York State Energy Research and Development Authority") %>%
+  hc_yAxis(title = list(text="Cumulative sum of EV"))
+p1
+```
+
+The above graph shows the cumulative number of EV registration in New York State since 2011. EV registration has grown 100 times between December 2011 to December 2015, and has maintained a steady growth rate up till now. New Yorkers have demonstrated strong interest for EVs over time.
+
+
+
+
+
+
+
+
+
+#### **Major drivers of New York State EV growth** 
+Next, we'll explore several key driving factors of rapid EV growth in New York State.
+
+
+
+
+
+
+#### **1st factor: growing population**
+The population of New York State has maintained a growing pace during the first half of 2010s. Hence, this creates more demand for auto industry including EV. 
+
+```{r, message=FALSE, warning=FALSE}
+population <- read_excel("C:\\Users\\wanyi\\Desktop\\Data_Visualization\\project\\ny_pop.xlsx")
+```
+
+```{r, warning=FALSE, message=FALSE}
+p3 <- ggplot(population, aes(x=year, y=cumsum(total_population/1000000), text=paste("Year: ", year,
+ "<br>cumulative population (Millions): ", cumsum(total_population/1000000)))) + geom_bar(stat="identity",alpha=.6, width=0.8, fill= "#0882c7")+labs(title = "New York State Cumulative Population",subtitle = "Source: U.S. Census Bureau", x="Year",y="Cumulative population (in millions)")+
+         theme_classic()+
+   theme(plot.title = element_text(size = 12, face = "bold"),
+         axis.title.x = element_text(size = 10),
+          axis.title.y = element_text(size = 10))+
+  scale_x_continuous(breaks = c(2010, 2011,2012,2013,2014,2015,2016,2017,2018,2019), labels = c("2010", "2011","2012", "2013","2014", "2015", "2016", "2017", "2018", "2019"))
+
+ggplotly(p3, tooltip="text")
+```
+
+
+
+
+
+
+
+#### **2nd factor: Carbon emission reduction and policy support**
+During the past 3 decades, gasoline and diesel remain as the top 2 sources of greeenhouse emissions under the transportation sector in the U.S.. Hence, New York State has issued a package of policies to accelerate the electrification trend in transportation. For example, New York State is one of the first states in the U.S. to sign a Zero Emission Vehicle Memorandum of Understanding (ZEV MOU) to enact policies that will ensure the deployment of 3.3 million
+light-duty ZEVs by 2025. Furthermore, under New York State's Charge NY initiative, electric vehicle buyers can receive a rebate of up to 2,000 for new car purchases or leases, together with a Federal Tax Credit of up to 7,500. In addition, automotive manufacfurers are offering more EV models for consumers to choose, ranging from cost-effective to luxury EV.
+
+Therefore, policy support and the increasing variety of EVs make it a good timing for consumers to purchase EV.
+
+
+```{r, message=FALSE, warning=FALSE}
+emission <- read_excel("C:\\Users\\wanyi\\Desktop\\Data_Visualization\\project\\ny_emission.xlsx")
+```
+
+```{r, message=FALSE, warning=FALSE}
+
+p4 <- ggplot(emission, aes(fill=type, y=inventory, x=as.factor(year), text=paste("Year: ", as.factor(year),
+                                                                                            "<br>Emissions inventory: ", inventory,
+                                                                                            "<br>Type: ", type)))+
+  geom_bar(position="dodge", stat="identity",alpha=.6, width=0.8) +
+         labs(title = "Transportation Sector Greenhouse Emissions Inventory, 1990–2016",subtitle = "Source: New York State Energy Research and Development Authority", x="Year",y="Emissions Inventory (MMtCO2e)")+
+         theme_bw()+
+   theme(plot.title = element_text(size = 10, face = "bold"),
+         axis.title.x = element_text(size = 9),
+          axis.title.y = element_text(size = 9))
+```
+
+```{r, echo=FALSE, warning=FALSE}
+ggplotly(p4, tooltip="text")
+```
+
+
+
+
+
+
+#### **3rd factor: Increasing number and variety of EV models offered**
+
+Due to the boost of design and battery technology, nowadays automotive manufacturers are offering various kinds of EV to the consumers. It is estimated that the number of battery electric (BEV) and plug-in hybrid (PHEV) passenger vehicle models available to U.S. consumers will increase from 60 to 83 between 2020 and 2022. Meanwhile, numerous manufacturers have publicly signaled their investment plans and commitments to a future of electric vehicle. 
+
+In addition, EVs have become more affordable because of dramatic reductions in the cost of batteries. The cost of battery packs has fallen from approximately \$1,000/kilowatt-hour (kWh) in 2010 to approximately \$156/kWh in 2019. These factors all contribute to the growth of EV sales.
+
+
+
+```{r, message=FALSE, warning=FALSE}
+
+EV_make <- read_excel(path=xl_data, sheet=3)
+EV_make <- head(EV_make, -1)
+EV_make <- mutate(EV_make, Name=paste(Make, Model))
+
+p5 <- EV_make %>%
+  hchart("treemap", hcaes(x='Name', value= 'Registrations', color= 'Registrations')) %>%
+           hc_title(text = "EV make-models in New York State by popularity") %>%
+           hc_subtitle(text = "Source: New York State Energy Research and Development Authority")
+p5
+```
+
+The above treemap shows the great variety of EV models in the current U.S. market. There are 66 EV models (PHEV and BEV) by 32 automotive manufacturers available to U.S. consumers. Tesla Model 3 and Toyota Prius Prime enjoy the predominant popularity among U.S. consumer, followed by Tesla Model S, Chevrolet Volt, Ford Fusion Energi, and Tesla Model X.
+
+In addition, U.S consumers prefer domestic car brands (Tesla, Chevrolet, Ford) the most, followed by Japanese brand (Toyota, Honda, and Nissan). Except for the two luxury EV models from Tesla (Model S and Model X), 8 out of the top 10 popular EVs are under \$50,000 (MSRP). It suggests that affordability and energy efficiency are the key factors when it comes to EV purchase for New York consumers.
+
+
+
+
+```{r, message=FALSE, warning=FALSE}
+metric = read_excel("C:\\Users\\wanyi\\Desktop\\Data_Visualization\\project\\ev_info.xlsx")
+```
+
+```{r, message=FALSE, warning=FALSE}
+p6 <- ggplot(metric,aes(x = range, y = MSRP/1000, label=type))+
+  #geom_point(aes(size = cost_per_mile),alpha=.6)+
+  geom_text(aes(color=factor(brand)), alpha = 0.6, vjust=-0.2, check_overlap=TRUE, size=3.5)+
+  labs(title = "Features of EV by Make-models", subtitle = "Source: Visual Capitalist", x="Range On a Single Charge(mile)",y="Manufacturer's Suggested Retail Price($k)")+ geom_label()+theme_bw()+
+  theme(plot.title = element_text(size = 12, face = "bold"),
+         axis.title.x = element_text(size = 9),
+          axis.title.y = element_text(size = 9))
+```
+
+```{r, message=FALSE, warning=FALSE}
+ggplotly(p6)
+```
+
+
+The above graph offers more detailed make-models information of the current EV market in the U.S.. In terms of affordability, there are six EV models available for under \$50,000 (MSRP) with a driving range of up to 250 miles. Specifically, EV models by Japanese carmakers (Nissan, Hyundai) emphasis the most on affordability. All of the 5 EV models by Japanese manufacturers are under \$40,000 (MSRP). There will be even more models with a net cost of under $50,000 when current federal, state, and rebates are factored in.
+
+
+
+
+
+
+
+
+
+
+
+### **Part 2: mapping the locations of EV charging stations in New York State**
+
+In this part, we'll map the current distribution of EV registration and charging stations in New York State, to examine whether charging stations would affect EV sales in the NY State. The assumption is that the number of charging stations is positively associated with EV sales. Both EV charging station and registration data are downloaded from New York State Energy Research and Development Authority, and were updated in 2021.
+
+
+```{r, message=FALSE, warning=FALSE}
+charging <- read.csv("C:/Users/wanyi/Desktop/Data_Visualization/project/EV_Charging_Stations.csv")
+
+charging1 <-charging %>%
+  select(City, ZIP, Latitude, Longitude,EV.Connector.Types, Access.Days.Time)
+  
+m <- leaflet(charging1) %>%
+  addTiles('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png')%>%
+     setView(-75.3167, 43.09287, zoom = 6)
+
+
+content <- paste("City name:",charging1$City,"<br/>",
+                 "Zipcode:", charging1$ZIP,"<br/>",
+                 "EV Connector Types:",charging1$EV.Connector.Types,"<br/>",
+                 "Access Days Time:", charging1$Access.Days.Time, "<br/>")
+
+
+m2 <- m %>% addCircles(popup = content)
+
+mclust <- m2 %>% addCircleMarkers(popup=content, clusterOptions = markerClusterOptions())
+mclust
+```
+
+
+From the above map, the coverage rate of EV charging stations in New York State is pretty high. Charging stations are mostly distributed in the southeast New York. The clusters of EV charging stations are significantly correlated with population density, where bigger cities have more charging stations. New York City has the most charging stations, followed by other large cities such as Albany, Buffalo, Rochester, Yonkers, and Syracuse. Next, let's further explore the distribution within NYC.
+
+
+
+```{r, message=FALSE, warning=FALSE}
+nybb <- readOGR("C:/Users/wanyi/Desktop/Data_Visualization/project/nybb_21a", layer="nybb")
+
+
+charging2 <- charging1 %>%
+  filter(City %in% c("New York", "Bronx", "Queens", "Brooklyn", "Staten Island", "Long Island City"))%>%
+  rename(BoroName = City)
+
+charging2$BoroName <- as.character(charging2$BoroName)
+charging2$BoroName[charging2$BoroName == "New York"] <- "Manhattan"
+charging2$BoroName[charging2$BoroName == "Long Island City"] <- "Queens"
+
+
+charging3 <- charging2 %>%
+  select(BoroName) %>%
+  group_by(BoroName) %>%
+  add_count(BoroName) %>%
+  distinct()
+
+nybb$number_of_charging <- charging3$n
+
+p7 <- tm_shape(nybb) + tm_fill("number_of_charging", title="Density of charging stations in NYC", style="pretty") +
+  tm_borders(alpha=0.5)+tm_style("white")
+
+p7
+
+```
+
+
+The above map is a heatmap of the distribution of EV charging stations in New York City. There are 326 EV charging stations in Manhattan, followed by 75 in Brooklyn, 21 in Queens, 19 in Staten Island, and 14 in Bronx. New Yorkers don't need to worry about charging their EVs in Manhattan since the borough has the most charging stations available in the state. 
+
+
+
+
+```{r, message=FALSE, warning=FALSE}
+nyzip = read_excel("C:\\Users\\wanyi\\Desktop\\Data_Visualization\\project\\ny_zipcode.xlsx")
+
+nyzip <- nyzip %>%
+  select(Zip, Latitude, Longitude)
+
+nyzip$Zip <- as.character(nyzip$Zip)
+  
+
+
+EV_registration <- read_excel(path=xl_data, sheet=2)
+EV_registration <- head(EV_registration, -1)
+EV_registration <- EV_registration %>% rename(Zip = `ZIP Code`)
+
+total <- left_join(nyzip, EV_registration, by=("Zip"))
+total[is.na(total)] <- 0
+
+mm <- leaflet(total) %>%
+  addTiles('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png')%>%
+     setView(-75.3167, 43.09287, zoom = 6)
+
+content2 <- paste("Zipcode:", total$Zip,"<br/>",
+                 "Number of PHEV/EREV:",total$`PHEV/EREV`,"<br/>",
+                 "Number of BEV:", total$BEV, "<br/>",
+                 "Total EVs:", total$`Total EVs`, "<br/>")
+
+m3 <- mm %>% addCircles(popup = content2)
+
+mclust2 <- m3 %>% addCircleMarkers(popup=content2, clusterOptions = markerClusterOptions())
+
+mclust2
+```
+
+
+The above map displays the distribution of EV registration in New York State by zipcode. The data is downloaded from New York State Energy Research and Development Authority and is updated in 2021. EV registration seems to be roughly even distributed throughout NY state at first glance. EVs are mostly distributed in the Southeast New York, which is the same pattern as shown in the map of charging stations. 
+
+Comparing the two maps, EV-charging station ratio is pretty high in Northeast and central NY, where more EVs are registrated but with fewer charging stations. By contrast, EV-charging station ratio is lowest in New York City.
+
+
+
+
+
+
+
+
+
+### **Part 3: LDA model analysis of EV-related tweets**
+
+In this part, we'll perform NLP analysis relating to EVs, including LDA analysis, Word cloud analysis and sentiment analysis. Our data scraped 11,706 tweets from Twitter between 2021-04-06 to 2021-04-14. The datatable below is an interactive table displaying our original texts. You can search for specific texts based on date or keywords.
+
+
+
+
+
+
+
+#### **3.1 Interactive table for EV-related tweets**
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+data = read.csv("C:/Users/wanyi/Desktop/Data_Visualization/project/evtweets.csv")
+data = data %>%
+  select("Date","Tweets")
+library(DT)
+library(data.table)
+dt <- datatable(data, filter = list(position='top'))
+dt
+```
+
+
+
+
+
+
+
+#### **3.2 Visualization of LDA model results**
+
+
+Below shows the screenshots of the three LDA topics. 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library("LDAvis")
+library(NLP)
+library(tm)
+library("servr")
+library(shiny)
+library("lda")
+
+data1 <- read.csv("C:/Users/wanyi/Desktop/Data_Visualization/project/evtw.csv")
+stop_words <- stopwords("SMART")
+tweet <- data1$usetext
+tweet <- gsub("^[[:space:]]+", "", tweet) # remove whitespace at beginning of documents
+tweet <- gsub("[[:space:]]+$", "", tweet) # remove whitespace at end of documents
+
+# tokenize on space and output as a list:
+doc.list <- strsplit(tweet, "[[:space:]]+")
+
+# compute the table of terms:
+term.table <- table(unlist(doc.list))
+term.table <- sort(term.table, decreasing = TRUE)
+
+# remove terms that are stop words or occur fewer than 10 times:
+del <- names(term.table) %in% stop_words | term.table < 10
+term.table <- term.table[!del]
+vocab <- names(term.table)
+
+# prepare documents for lda:
+get.terms <- function(x) {
+  index <- match(x, vocab)
+  index <- index[!is.na(index)]
+  rbind(as.integer(index - 1), as.integer(rep(1, length(index))))
+}
+documents <- lapply(doc.list, get.terms)
+
+# Compute some statistics related to the data set:
+D <- length(documents)  # number of documents (2,000)
+W <- length(vocab)  # number of terms in the vocab (14,568)
+doc.length <- sapply(documents, function(x) sum(x[2, ]))  # number of tokens per document 
+N <- sum(doc.length)  # total number of tokens in the data 
+term.frequency <- as.integer(term.table)  # frequencies of terms in the corpus 
+
+# Fit the model:
+library(lda)
+set.seed(1)
+
+fit <- lda.collapsed.gibbs.sampler(documents = documents, K = 3, vocab = vocab, 
+                                   num.iterations = 250, alpha = 0.5, eta=0.5,
+                                   initial = NULL, burnin = 0,
+                                   compute.log.likelihood = TRUE)
+
+#LDAvis
+theta <- t(apply(fit$document_sums + 0.1, 2, function(x) x/sum(x)))
+phi <- t(apply(t(fit$topics) + 0.1, 2, function(x) x/sum(x)))
+
+tweetvis <- list(phi = phi,
+                 theta = theta,
+                 doc.length = doc.length,
+                 vocab = vocab,
+                 term.frequency = term.frequency)
+
+
+# create visualization
+json <- createJSON(phi = tweetvis$phi, 
+                   theta = tweetvis$theta, 
+                   doc.length = tweetvis$doc.length, 
+                   vocab = tweetvis$vocab, 
+                   term.frequency = tweetvis$term.frequency)
+
+serVis(json, out.dir = tempfile(), open.browser = interactive())
+```
+
+![Visualization of Topic 1](C:/Users/wanyi/Desktop/Data_Visualization/project/topic1.png)
+
+
+
+![Visualization of Topic 2](C:/Users/wanyi/Desktop/Data_Visualization/project/topic2.png)
+
+
+
+![Visualization of Topic 3](C:/Users/wanyi/Desktop/Data_Visualization/project/topic3.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+From the LDA visualization above, we categorize our documents into 3 topics: Infrastructure Maturity, Experience Sharing, and Technological Elements. 
+
+1) Topic 1: Infrastructure Maturity displays common words such as "charging" and "station". Building EV-related nfrastruture is important to the development of electric cars. There's no doubt that customers pay attention to such aspect.   
+
+2) Topic 2: Experience Sharing displays common words such as "range" and "price". Customers often share their personal experience with EVs on Twitter. For example, they value the price and driving range of EVs.     
+
+3) Topic 3: Technological Elements contains words such as "battery", "gas" and "plan". People care about the battery of EVs, especially in some leading brands such as Tesla and Polestar. They also compare the endurance power between electricty and gas. 
+    
+On the left hand side of this graph are three different-sized bubble. The larger the bubble is, the more prevalent the topic is. The detailed prevalence ranking is: Infrastructure Maturity > Experience Sharing > Technological Elements.
+
+If you would like to play around with the LDA metrics and top words, We've also included another html file that was conducted in Python in the Github repository. 
+
+
+
+```{r echo=FALSE}
+df <- read.csv("C:/Users/wanyi/Desktop/Data_Visualization/project/evtweets.csv")
+```
+
+
+
+```{r include=FALSE}
+#### Preprosessing
+electric <- df %>%
+  select(Date, clean_text) 
+
+colnames(electric)[1] <- "doc_id"
+colnames(electric)[2] <- "text"
+electric_for_corpus <- electric %>%
+                        select(doc_id, text)
+df_source <- DataframeSource(electric_for_corpus)
+
+```
+
+
+```{r include=FALSE}
+#### Creating corpus 
+library(tm)
+df_corpus_electric <- VCorpus(df_source)
+df_corpus_electric
+```
+
+```{r include=FALSE}
+#### Text Cleaning: remove certain words
+clean_corpus <- function(corpus){
+  corpus <- tm_map(corpus,removeWords, c("electric", "car", "http","vehicle"))
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+
+electric_clean <- clean_corpus(df_corpus_electric)
+```
+
+
+```{r include=FALSE}
+#### Stemming 
+library(SnowballC)
+
+electric_stemmed <- tm_map(df_corpus_electric, stemDocument)
+
+# Show one example
+electric_stemmed[[15]]$content
+
+```
+
+
+
+
+
+
+
+
+
+
+
+#### **3.3 Twitter sentiment analysis**
+
+The COVID-19 crisis has shifted the EV landscape in multiple areas. Coupled with rapid collapse of trade and employment, consumer purchasing power has decreased; this lowering consumer demand in turn contributed to a significant plunge in oil prices and cheaper gasoline prices, which in hindsight would boost traditional automobile sales. The pandemic also has slowed EV offerings with numerous plants and auto-assembly lines shutting down in 2020. Despite these negative externalities, electric mobility has remained resilient 
+with relatively stable EV sales. From a policy standpoint, the COVID-19 crisis may have prompted positive changes in emission regulation and incentives, creating positive signals for potential EV buyers. For instance, several governments have improved purchase incentives 
+such as tax exemptions and purchase subsidies, as well as expanding low-emission zones with increased public charging infrastructure. 
+
+With a thorough understanding of the changing EV industry landscape, we aim to understand how customers' perceptions towards EVs have evolved in the midst of the pandemic. As a result, our team decided to retrieve EV related twitter posts from April 6th - April 14th, 
+2021 to answer the following research questions: 
+
+
+* Understand what are people talking about: identify consumers’ concerns and needs 
+* Measure customers’ perceptions towards EV in the midst of the pandemic crisis: assess whether thye hold positive or negative 
+sentiment
+* Gain Forward-looking perspectives: gauge customer perspectives with regards to the future of electric mobility
+
+***
+
+
+
+
+
+#### **3.3.1 Identify frequently mentioned terms** 
+
+Our team hypothesized that scrapping twitter posts could shed light on current EV early adopters’ pain points while reflecting potential 
+EV buyers' key decision-making criteria upon purchasing an electrical vehicle. As a result, we first created a word cloud with the bigger sized words indicating a higher frequency. From the word cloud, we can identify commonly mentioned words like “new”, “tesla”, “battery”, and “charging.” Other meaningful frequently used terms include “carbon”, “amp”, “cost” and "tax."
+
+
+```{r echo=TRUE}
+electric_tdm <- TermDocumentMatrix(electric_clean)
+
+electric_m <- as.matrix(electric_tdm)
+
+words <- sort(rowSums(electric_m),decreasing=TRUE) 
+electric_df <- data.frame(word = names(words),freq=words)
+```
+
+
+```{r echo=TRUE}
+
+library(wordcloud)
+
+set.seed(1234) # for reproducibility 
+
+# Create purple_orange
+purple_orange <- brewer.pal(10, "PuOr")
+# Drop 2 faintest colors
+purple_orange <- purple_orange[-(1:2)]
+
+# Create a wordcloud with purple_orange palette
+p1 <- wordcloud(words = electric_df$word, freq = electric_df$freq,
+      max.words = 100, colors = purple_orange) 
+
+```
+
+
+
+
+
+#### **3.3.2 Customer need analysis: highlighting three major EV consumer needs**
+
+
+
+**Charging Infrastructure**: One of the biggest challenges in the electric mobility business is whether the charging infrastructure can keep up with growing EV demand. Without sufficient access to charging stations, customers must drive extra miles to find the nearest station,thereby undermining their purchase intentions. Ideally, charging stations should be widely available in vast parking lots where 
+GPS could easily locate.
+
+
+
+**Battery Storage and Longevity**: Aside from the up-front EV ownership costs, battery-cost and efficiency improvements are of interest to many potential EV buyers. Most recently, a new topic of battery leasing is emerging: "batteries could be leased separately from the EV and be resold to the stationary storage market for secondary use." This may attract more potential EV buyers who were intially worried about the degrading capacity of EV batteries this day.   
+
+
+
+**Tesla's Premium Positioning**: Along with the rise of renewable energy, Tesla has pioneered the EV industry with luxury electric cars in the past decade. In fact, one of the key business success factors are their advanced models that move boldly away from traditional automobile vehicles with its spectacular design and unique car user experience. However, the premium branding of the Tesla EVs may have deterred mainstream buyers from purchasing a EV model due to a lack of affordable charging stations. 
+
+If the US market in particular wants to achieve mass EV adoptions in the coming years, two types of customers should be considered. On the one hand, some EV enthusiasts may be on the lookout for Tesla's advancement in autonomous technology and self-driving vehicles. On the other hand, similar to traditional automobile customers, average EV buyers who have varying needs and behavior should be supplied with an equally diverse range of EV model selections, which in turn will prompt more affordable charging stations available in different locations. 
+
+```{r echo=TRUE}
+p2 <- electric_df %>% 
+  filter(freq > 480) %>%
+  ggplot(aes(reorder(word, freq), freq, fill = "#0882c7ins")) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  #geom_text(aes(label=word, x=word, y=180), hjust = 0, color="white") +
+  geom_text(aes(label=freq, x=word, y=100), hjust = 1, color="white") + xlab(NULL) +
+  labs(y = "Word Frequency") +  coord_flip() +
+  ggtitle("Most Frequent Terms in Electrical Vehicle Related Tweets") +
+  theme_classic()
+p2
+```
+
+
+```{r include=FALSE}
+library(quanteda)
+quanteda_corpus <-quanteda::corpus(electric_stemmed)
+require(quanteda)
+```
+
+```{r include=FALSE}
+pos <- read.table("C:/Users/wanyi/Desktop/Data_Visualization/project/positive-words.txt", as.is=T)
+neg <- read.table("C:/Users/wanyi/Desktop/Data_Visualization/project/negative-words.txt", as.is=T)
+```
+
+```{r include=FALSE}
+sentiment <- function(words){
+  require(quanteda)
+  tok <- quanteda::tokens(words)
+  pos.count <- sum(tok[[1]]%in%pos[,1])
+  cat("\n positive words:",tok[[1]][which(tok[[1]]%in%pos[,1])],"\n")
+  neg.count <- sum(tok[[1]]%in%neg[,1])
+  cat("\n negative words:",tok[[1]][which(tok[[1]]%in%neg[,1])],"\n")
+  out <- (pos.count - neg.count)/(pos.count+neg.count)
+  cat("\n Tone of Document:",out)
+  return(out)
+}
+
+```
+
+```{r include=FALSE }
+quanteda_df <- data.frame(quanteda_corpus)
+quanteda_df$tone <- apply(quanteda_df, 1, function(x){sentiment(x)})
+quanteda_df[is.na(quanteda_df)] = 0.0
+```
+
+```{r include=FALSE}
+head(quanteda_df)
+```
+
+
+
+
+
+
+#### **3.3.3 Measuring customer perceptions towards EVs** 
+
+As we have identified in the factor analysis, we hypothesize customers hold a relatively positive view towards the electric mobility business for several reasons: from the shifting focus on greenhouse gas emissions, to increasing government investment for public charging stations, to a variety of EV models offered, to the introduction of battery leasing and storage. 
+
+To test out this hypothesis, we conducted a sentiment analysis that highlights a relatively positive sentiment pattern over EVs. During the 7-day twitter extraction period, the number of positive tweets outweigh the number of negative tweets; out of the 11,706 posts extracted, the majority of posts are identified as neutral tones.  
+
+
+```{r message=FALSE, warning=FALSE}
+library(plotly)
+category_sent <- ifelse(quanteda_df$tone < 0, "Negative", ifelse(quanteda_df$tone > 0, "Positive", "Neutral"))
+totals <- data.frame(table(category_sent))
+plot_ly(totals, x = ~category_sent, y = ~Freq, type = 'bar',
+        marker = list(color = c('grey', 'orange',
+                                'purple'))) %>% layout(title = 'Electric Vehicle Tweets by Sentiment in April 2021')
+
+```
+
+```{r message=FALSE, warning=FALSE}
+positive_tone <- quanteda_df %>%
+  filter(tone == 1) %>%
+  mutate(rank=row_number()) 
+
+negative_tone <- quanteda_df %>%
+  filter(tone < 0) %>%
+  mutate(rank=row_number()) 
+```
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidytext)
+library(textdata)
+sentiment <- electric_df %>%
+      inner_join(get_sentiments("bing")) 
+
+head(sentiment)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tidytext)
+library(textdata)
+  
+sentiment_postive <- sentiment %>%
+  filter(sentiment == "positive") %>%
+  arrange(desc(freq))
+
+positive <- sentiment_postive %>%
+  filter(freq > 85)
+
+positive
+```
+
+
+```{r message=FALSE, warning=FALSE}
+sentiment_negative <- sentiment %>%
+  filter(sentiment == "negative") %>%
+  arrange(desc(freq))
+
+negative <- sentiment_negative %>%
+  filter(freq > 37)
+
+negative
+```
+
+
+
+
+
+
+#### **3.4 Understand what individuals are actually talking about on Twitter?**
+
+
+
+**Positive Sentiment**: Among the positive tweets, a positive trend is illustrated through a list of high frequency terms such as "like",  "great", "good", "love" and "better." More specifically, "cheaper" and "afford" are also categorized as positive words, implying a narrowing price gap and a wider range of affordable models offered in the general EV market which again aligns with our previous EV model analysis.  
+
+**Negative Sentiment**: The negative sentiment, in hindsight, helps to depict a detailed portrait of what exactly individuals are concerned with. First, the top frequency words such as "limited" and "expansive" demonstrates a strong premium brand image attributable to Tesla' s luxury model success. However, this clear brand image may have limited the growth of the mainstream EV market since potential customers might shy away from purchasing a EV due to price concerns. Additionally, words like "problem" and "killed" possibly imply potential safety concerns with regards to battery quality and autonomous vehicle accidents. To verify these insights, more text data are required to understand whether concerns vary by region or may have evolved overtime. 
+
+
+```{r message=FALSE, warning=FALSE}
+
+plot4<-positive %>%
+  ggplot(aes(x=reorder(word, freq), y = freq))+
+  geom_bar(stat="identity")+
+  #scale_fill_discrete("Sentiment", labels = c("Positive", "Negative"))+
+  scale_fill_manual("legend", values=c("#00CED1","ff3300")) +
+  theme_bw()+
+  theme(legend.position="left", legend.title=element_text(size=14), legend.text=element_text(size=14))+
+  labs(x="Twitter Words", y="Frequency", title="Positive Sentiment")+
+  theme(plot.title=element_text(hjust=0.5, size=22))+
+  theme(axis.text.x=element_text(size=14),axis.text.y=element_text(size=14),axis.title.x=element_text(size=18), axis.title.y= element_text(size=18))+
+  coord_flip() +
+  theme_economist()
+
+plot5<-negative %>%
+  ggplot(aes(x=reorder(word, freq), y = freq))+
+  geom_bar(stat="identity")+
+  #scale_fill_discrete("Total duration of EVA")+
+  scale_fill_manual(values=c("ff3300"))+
+  theme_bw()+
+  theme(legend.position="left", legend.title=element_text(size=14), legend.text=element_text(size=14))+
+  labs(x="Twitter Words", y="Frequency", title="Negative Sentiment")+
+  theme(plot.title=element_text(hjust=0.5, size=22))+
+  theme(axis.text.x=element_text(size=14),axis.text.y=element_text(size=14),axis.title.x=element_text(size=18), axis.title.y= element_text(size=18))+
+  coord_flip() +
+  theme_economist()
+plot9<-ggarrange(plot4, plot5, nrow=1, ncol=2)
+plot9
+
+
+
+```
+
+
+
