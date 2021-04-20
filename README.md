@@ -7,6 +7,9 @@ Taotao Jiang (tj2441@columbia.edu)
 Wanying Li (wl2722@columbia.edu)
 Yunxuan Chen (yc3682@columbia.edu)
 
+#### Project link: https://rpubs.com/christinalvv/data_vis_ev
+
+
 #### Introduction
 Invented as early as mid-19th century, electric vehicles (EVs) have become the modern society's choice to reduce carbon emissions and promote sustainable growth. Recent years have witnessed a rapid rising trend of global EV growth. Using New York State as an example, our project aims to analyze the historical trend and current status of the EV market, and predict the future image of EV industry. Specifically, our project consists of 3 parts: first, we analyze the historical trend of the EV industry in New York State, together with the contributing factors. Second, we map the current distribution of EV registration and charging stations in New York State at county level. Finally, we employ sentiment analysis and LDA model analysis to explore customer's perceptions and expectation about EV. The key questions we'd like to address are:
 
